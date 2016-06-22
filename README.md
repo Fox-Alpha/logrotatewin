@@ -5,6 +5,7 @@ I've addd the following features:
 - Ability to provide relative path when specifying Olddir
 - Ken's always compares to previous run when rotating, so the first run was never successful for me. I fixed it.
 - If confpath is not provided Content\logrotate.conf will be used by default.
+- Added log4net for logging.
 
 
 # Original readme:
