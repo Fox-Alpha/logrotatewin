@@ -48,8 +48,10 @@ namespace logrotate
             // parse the command line
             try
             {
-                var currentpath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
-                var defaultConfPath = Path.Combine(currentpath, Path.Combine("Content", "logrotate.conf")).TrimStart(@"file:\".ToCharArray());             
+                Logging.SetUpLog4Net();
+
+                string currentpath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
+                string defaultConfPath = Path.Combine(currentpath, Path.Combine("Content", "logrotate.conf")).TrimStart(@"file:\".ToCharArray());             
 
                 if (args.Length == 0)
                 {                       
