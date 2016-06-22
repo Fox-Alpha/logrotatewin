@@ -24,7 +24,7 @@ namespace logrotate
 {
     class logrotateconf
     {
-        #region Private variables
+        #region Private variables        
         private bool bcompress = true;
         //private string scompresscmd = "gzip";
         //private string suncompressedcmd = "gunzip";
@@ -77,7 +77,6 @@ namespace logrotate
         #endregion
 
         #region Public properties
-
         public int ProcessCount
         {
             get { return process_count; }
@@ -157,7 +156,8 @@ namespace logrotate
 
         public string OldDir
         {
-            get { return solddir; }          
+            get { return solddir; }
+            set { solddir = value; }          
         }
 
         public bool CopyTruncate
@@ -266,7 +266,7 @@ namespace logrotate
         /// </summary>
         /// <param name="m_source">The source logrotateconf object to copy</param>
         public logrotateconf(logrotateconf m_source)
-        {
+        {           
             bcompress = m_source.bcompress;
             //scompresscmd = m_source.scompresscmd;
             //suncompressedcmd = m_source.suncompressedcmd;

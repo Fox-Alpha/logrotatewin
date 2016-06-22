@@ -79,6 +79,7 @@ namespace logrotate
         public static void Log(string m_text)
         {
             Log(m_text, LogType.Required);
+            
         }
 
         /// <summary>

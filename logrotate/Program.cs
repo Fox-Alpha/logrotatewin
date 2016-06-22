@@ -138,7 +138,7 @@ namespace logrotate
                             if (Directory.Exists(kvp.Key))
                             {
                                 // this is pointed to a folder, so process all files in the folder
-                                DirectoryInfo di = new DirectoryInfo(kvp.Key);
+                                DirectoryInfo di = new DirectoryInfo(kvp.Key);                               
                                 FileInfo[] fis = di.GetFiles();
                                 foreach (FileInfo m_fi in fis)
                                 {
@@ -699,31 +699,23 @@ namespace logrotate
             string rotate_path = "";
             if (lrc.OldDir != "")
             {
-
+                //if OldDir is not absolute, but relative, make it absolute
                 if (!Path.IsPathRooted(lrc.OldDir))
                 {
-                    /*
-                    String folder = Path.GetFullPath(lrc.OldDir);
-                    if (!Directory.Exists(folder))
-                    {
-                        Directory.CreateDirectory(folder);
-                    }
-
-                    rotate_path = folder + "\\";   
-                    */                  
-                }
+                    lrc.OldDir = Path.Combine(Path.GetDirectoryName(fi.FullName), lrc.OldDir);                    
+                } 
                               
-                else if (!Directory.Exists(lrc.OldDir))
+                if (!Directory.Exists(lrc.OldDir))
                 {
                     Directory.CreateDirectory(lrc.OldDir);
-                    rotate_path = lrc.OldDir + "\\";
+                    
                 }
+                rotate_path = lrc.OldDir + "\\";
 
-                
             }
             else
                 rotate_path = Path.GetDirectoryName(fi.FullName) + "\\";
-
+           
             return rotate_path;
         }
 
@@ -888,7 +880,7 @@ namespace logrotate
 
             // determine path to put the rotated log file
             string rotate_path = GetRotatePath(lrc,fi);
-
+           
             // age out old logs
             AgeOutRotatedFiles(lrc, fi,rotate_path);
 
