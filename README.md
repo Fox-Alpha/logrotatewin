@@ -1,4 +1,7 @@
-# logrotatewin
+# logrotatewin // Peter's branch
+
+//// updates here
+
 This is a Windows implementation of the logrotate utility found in Linux platforms. The goal is to use the same command line parameters and files as the Linux version.
 
 LogRotate for Windows
