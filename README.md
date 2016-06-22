@@ -6,7 +6,7 @@ I forked Ken's logrotate implementation because there are few functions that are
 - If confpath is not provided Content\logrotate.conf will be used by default.
 
 
-Original readme:
+# Original readme:
 This is a Windows implementation of the logrotate utility found in Linux platforms. The goal is to use the same command line parameters and files as the Linux version.
 
 LogRotate for Windows
