@@ -157,7 +157,7 @@ namespace logrotate
 
         public string OldDir
         {
-            get { return solddir; }
+            get { return solddir; }          
         }
 
         public bool CopyTruncate
@@ -450,8 +450,8 @@ namespace logrotate
                     PrintDebug(split[0], split[1], bDebug);
                     break;
                 case "olddir":
-                    solddir = split[1];
-                    PrintDebug(split[0], split[1], bDebug);
+                    solddir = split[1].TrimEnd('"').TrimStart('"');
+                    PrintDebug(split[0], solddir, bDebug);
                     break;
                 case "noolddir":
                     solddir = "";
