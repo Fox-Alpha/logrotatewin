@@ -3,6 +3,7 @@
 I forked Ken's logrotate implementation because there are few functions that are not fitting into our use-case scenarios.
 - Ability to provide relative path when specifying Olddir
 - Ken's always compares to previous run when rotating, so the first run was never successful for me. I fixed it.
+- If confpath is not provided Content\logrotate.conf will be used by default.
 
 
 Original readme:
