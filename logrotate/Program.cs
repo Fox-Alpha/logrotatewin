@@ -638,15 +638,20 @@ namespace logrotate
             if (lrc.DateExt)
             {
                 string time_str = lrc.DateFormat;
-                time_str = time_str.Replace("%Y", DateTime.Now.Year.ToString());
-                time_str = time_str.Replace("%m", DateTime.Now.Month.ToString("D2"));
-                time_str = time_str.Replace("%d", DateTime.Now.Day.ToString("D2"));
+                DateTime now = DateTime.Now;
+                time_str = time_str.Replace("%Y", now.Year.ToString());
+                time_str = time_str.Replace("%m", now.Month.ToString("D2"));
+                time_str = time_str.Replace("%d", now.Day.ToString("D2"));
+                time_str = time_str.Replace("%H", now.Hour.ToString("D2"));
+                time_str = time_str.Replace("%M", now.Minute.ToString("D2"));
                 time_str = time_str.Replace("%s", ((double)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds).ToString());
-                rotate_name = fi.Name + time_str;
+                // rotate_name = fi.Name + time_str;
+                rotate_name = Path.GetFileNameWithoutExtension(fi.Name) +
+                    time_str +
+                    Path.GetExtension(fi.Name);
             }
             else
             {
-                
                 rotate_name = fi.Name + "." + lrc.Start;
             }
             return rotate_name;
@@ -1041,7 +1046,12 @@ namespace logrotate
         {
             Logging.Log(Strings.ParseConfigFile+" " + m_path_to_file,Logging.LogType.Verbose);
 
-            StreamReader sr = new StreamReader(m_path_to_file);
+            //StreamReader sr = new StreamReader(m_path_to_file);
+  
+            MemoryStream ms = GetModifiedFile(m_path_to_file);
+  
+            StreamReader sr = new StreamReader(ms, System.Text.Encoding.UTF8, true);
+  
             bool bSawASection = false;
             // read in lines until done
             while (true)
@@ -1064,9 +1074,19 @@ namespace logrotate
                     continue;
                 }
 
+                // every line until we've met { must be a file to rotate
+                //if (!bSawASection)
+                //{
+                //    Logging.Log(Strings.Processing + " " + Strings.NewSection, Logging.LogType.Verbose);
+
+                //    // create a new config object taking defaults from Global Config
+                //    logrotateconf lrc = new logrotateconf(GlobalConfig);
+
+                //    ProcessConfileFileSection(line, sr, lrc);
+                //}
+
                 // see if there is a { in the line.  If so, this is the beginning of a section 
                 // otherwise it may be a global setting
-
                 if (line.Contains("{"))
                 {
                     bSawASection = true;
@@ -1191,6 +1211,24 @@ namespace logrotate
 
         }
 
+        private static MemoryStream GetModifiedFile(string _path)
+        {
+            //  This function previously concatenated multiple lines preceding an open 
+            //  brace into a single parameter - If any of these lines were a comment, it 
+            //  would cause the filename and open brace to be ignored resulting in file 
+            //  parsing errors. Even the logrotate.conf file supplied with this project 
+            //  could not be successfully read. This has been corrected by using a Regex 
+            //  to suppress one or more newlines and whitespace preceding an open brace 
+            //  only rather than _all_ preceding new-lines in the file.
+            string Data = File.ReadAllText(_path);
+
+            Regex Reg = new Regex(@"(\r\n?|\n|\s)+\{");
+            Data = Reg.Replace(Data, " {");
+            
+            byte[] Bytes = Encoding.ASCII.GetBytes(Data);
+            MemoryStream s = new MemoryStream(Bytes);
+            return s;
+        }
     }
 
     class CmdLineArgs
@@ -1262,6 +1300,7 @@ namespace logrotate
                             Logging.Log(Strings.ForceOptionSet,Logging.LogType.Required);
                             break;
                         case "-?":
+                        case "--help":
                         case "--usage":
                             bUsage = true;
                             break;
