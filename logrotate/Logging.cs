@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using log4net;
+using log4net.Config;
+using System.IO;
 
 
 /*
@@ -28,6 +31,14 @@ namespace logrotate
     /// </summary>
     class Logging
     {
+
+        private static readonly ILog log = LogManager.GetLogger(typeof(Logging));
+
+        public static void SetUpLog4Net()
+        {
+            log4net.Config.XmlConfigurator.Configure(new FileInfo(@"log4net.xml"));            
+        }
+
         public enum LogType
         {
             Debug,
@@ -79,6 +90,7 @@ namespace logrotate
         public static void Log(string m_text)
         {
             Log(m_text, LogType.Required);
+            
         }
 
         /// <summary>
@@ -87,26 +99,31 @@ namespace logrotate
         /// <param name="m_text">Text to Log</param>
         /// <param name="m_type">Type of Log (Error,Required,Debug,Verbose)</param>
         public static void Log(string m_text, Logging.LogType m_type)
-        {
+        {            
             switch (m_type)
             {
+                
                 case LogType.Error:
                     DoErrorLog(m_text);
+                    log.Error(m_text);
                     return;
                 case LogType.Required:
                     DoLog(m_text);
+                    log.Info(m_text);
                     return;
                 case LogType.Debug:
                     if (bDebug)
                     {
                         DoLog(m_text);
                     }
+                    log.Debug(m_text);
                     return;
                 case LogType.Verbose:
                     if (bVerbose)
                     {
                         DoLog(m_text);
                     }
+                    log.Debug(m_text);
                     return;
             }
 

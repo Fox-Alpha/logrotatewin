@@ -48,11 +48,23 @@ namespace logrotate
             // parse the command line
             try
             {
+                Logging.SetUpLog4Net();
+
+                string currentpath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
+                string defaultConfPath = Path.Combine(currentpath, Path.Combine("Content", "logrotate.conf")).TrimStart(@"file:\".ToCharArray());             
+
                 if (args.Length == 0)
-                {
-                    PrintVersion();
-                    PrintUsage();
-                    Environment.Exit(0);
+                {                       
+                    if (IsConfFileEmptyOrNotExists(defaultConfPath))
+                    {
+                        Logging.Log(String.Format("Arguments not provided and {0} not found", defaultConfPath), Logging.LogType.Debug);
+                        PrintVersion();
+                        PrintUsage();
+                        Environment.Exit(0);
+                    }
+
+                   //using \Content\logrotate.conf
+                     
                 }
 
                 cla = new CmdLineArgs(args);
@@ -65,10 +77,19 @@ namespace logrotate
                 Status = new logrotatestatus(cla.AlternateStateFile);
                 
                 // now process the config files
-                foreach (string s in cla.ConfigFilePaths)
+                
+                if (args.Length != 0)
                 {
-                    ProcessConfigPath(s);
+                    foreach (string s in cla.ConfigFilePaths)
+                    {
+                        ProcessConfigPath(s);
+                    }
                 }
+                else //we use \Content\logrotate.conf file which is the default
+                {
+                    ProcessConfigFile(defaultConfPath);
+                }
+               
 
                 // if there was an include directive in the global settings, then we need to process that 
                 if (GlobalConfig.Include != "")
@@ -81,6 +102,7 @@ namespace logrotate
                     Logging.Log(Strings.ExecutingFirstAction, Logging.LogType.Verbose);
                     ProcessFirstAction(GlobalConfig);
                 }
+
 
 
                 // now that config files have been read, let's run the main process
@@ -118,7 +140,7 @@ namespace logrotate
                             if (Directory.Exists(kvp.Key))
                             {
                                 // this is pointed to a folder, so process all files in the folder
-                                DirectoryInfo di = new DirectoryInfo(kvp.Key);
+                                DirectoryInfo di = new DirectoryInfo(kvp.Key);                               
                                 FileInfo[] fis = di.GetFiles();
                                 foreach (FileInfo m_fi in fis)
                                 {
@@ -186,11 +208,35 @@ namespace logrotate
                             }
                         }
 
-                        // now rotate
+                        //if there is nothing to rotate, but still I want to remove old files from archive folder
+                        if (m_rotatefis.Count == 0)
+                        {
+                            var enumConf = FilePathConfigSection.GetEnumerator();
+                            if (enumConf.MoveNext())
+                            {
+                                String archiveDir = enumConf.Current.Value.OldDir;
+
+                                if (!String.IsNullOrEmpty(archiveDir) && Directory.Exists(archiveDir) && enumConf.Current.Value.MaxAge > 0)
+                                {
+                                    DirectoryInfo di = new DirectoryInfo(archiveDir);
+                                    foreach (FileInfo file in di.GetFiles())
+                                    {
+                                        if (file.LastWriteTime < DateTime.Now.Subtract(new TimeSpan(enumConf.Current.Value.MaxAge, 0, 0, 0)))
+                                        {
+                                            file.Delete();
+                                        }  
+                                    }
+                                }
+                            }                            
+
+                        }
+
+                        // now rotate, if there is any file to rotate                        
                         foreach (FileInfo r_fi in m_rotatefis)
                         {
                             RotateFile(kvp.Value, r_fi);
                         }
+                        
 
                         // if sharedscripts enabled, then run postrotate if this is the last file
                         if ((kvp.Value.PostRotate != null) && (kvp.Value.SharedScripts == true))
@@ -311,6 +357,35 @@ namespace logrotate
         }
 
         /// <summary>
+        /// Checking if the config file is filled by the user.
+        /// </summary>
+        /// <param name="conffile">Full path to config file</param>       
+        /// <returns>True if file is empty or just have comments in it, false if user filled it.</returns>
+        private static bool IsConfFileEmptyOrNotExists(String conffile)
+        {
+            if (!File.Exists(conffile))
+            {
+                return true;
+            }     
+
+            using (StreamReader streamReader = new StreamReader(conffile))
+            {                
+                while (streamReader.Peek() >= 0)
+                {
+                    String currentLine = streamReader.ReadLine();
+                    if (currentLine.Length > 0 && currentLine[0] != '#' && currentLine[0] != ' ' && !String.IsNullOrEmpty(currentLine))
+                    {                    
+                        streamReader.Close();
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+
+        }
+
+        /// <summary>
         /// Check to see if the logfile specified is eligible for rotation
         /// </summary>
         /// <param name="logfilepath">Full path to the log file to check</param>
@@ -380,25 +455,38 @@ namespace logrotate
                 }
                 else
                 {
-                    // check last date of rotation
+                    // check last date of rotation                  
                     DateTime lastRotate = Status.GetRotationDate(logfilepath);
                     TimeSpan ts = DateTime.Now - lastRotate;
                     if (lrc.Daily)
                     {
+                        //Peter addition                        
+                        if (fi.LastWriteTime < DateTime.Now.AddDays(-1))
+                        {
+                            bDoRotate = true;
+                        }
+
                         // check to see if lastRotate is more than a day old
-                        if (ts.TotalDays > 1)
+                        if (ts.TotalDays > 1 && lastRotate != new DateTime(1970, 1, 1))
                         {
                             bDoRotate = true;
                         }
                     }
                     if (lrc.Weekly)
                     {
-                        // check if total # of days is greater than a week or if the current weekday is less than the weekday of the last rotation
-                        if (ts.TotalDays > 7)
+                        //Peter addition
+                        if (fi.LastWriteTime < DateTime.Now.AddDays(-7))
                         {
                             bDoRotate = true;
                         }
-                        else if (DateTime.Now.DayOfWeek < lastRotate.DayOfWeek)
+
+                        // check if total # of days is greater than a week or if the current weekday is less than the weekday of the last rotation
+                        if (ts.TotalDays > 7 && lastRotate != new DateTime(1970,1,1))
+                        {
+                            bDoRotate = true;
+                        }
+
+                        if (DateTime.Now.DayOfWeek < lastRotate.DayOfWeek && lastRotate != new DateTime(1970, 1, 1))
                         {
                             bDoRotate = true;
                         }
@@ -613,16 +701,23 @@ namespace logrotate
             string rotate_path = "";
             if (lrc.OldDir != "")
             {
+                //if OldDir is not absolute, but relative, make it absolute
+                if (!Path.IsPathRooted(lrc.OldDir))
+                {
+                    lrc.OldDir = Path.Combine(Path.GetDirectoryName(fi.FullName), lrc.OldDir);                    
+                } 
+                              
                 if (!Directory.Exists(lrc.OldDir))
                 {
                     Directory.CreateDirectory(lrc.OldDir);
+                    
                 }
-
                 rotate_path = lrc.OldDir + "\\";
+
             }
             else
                 rotate_path = Path.GetDirectoryName(fi.FullName) + "\\";
-
+           
             return rotate_path;
         }
 
@@ -692,6 +787,7 @@ namespace logrotate
                         RemoveOldRotateFile(fi.FullName, lrc, m_fi);
                         continue;
                     }
+                    return;
                 }
             }
             // iterate through array, determine if file needs to be removed or emailed
@@ -786,7 +882,7 @@ namespace logrotate
 
             // determine path to put the rotated log file
             string rotate_path = GetRotatePath(lrc,fi);
-
+           
             // age out old logs
             AgeOutRotatedFiles(lrc, fi,rotate_path);
 
